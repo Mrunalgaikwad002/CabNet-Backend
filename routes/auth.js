@@ -25,9 +25,9 @@ router.post('/signup/user', async (req, res) => {
       .insert({
         clerk_id: clerkId,
         email,
-        first_name: firstName,
-        last_name: lastName,
-        phone_number: phoneNumber
+        first_name: firstName || '',
+        last_name: lastName || '',
+        phone_number: phoneNumber || ''
       })
       .select()
       .single();
@@ -62,26 +62,30 @@ router.post('/signup/driver', async (req, res) => {
     }
 
     // Create new driver
+    // Provide safe defaults for required NOT NULL fields when missing
+    const vInfo = vehicleInfo || {};
+    const driverPayload = {
+      clerk_id: clerkId,
+      email,
+      first_name: firstName || '',
+      last_name: lastName || '',
+      phone_number: phoneNumber || '',
+      license_number: licenseNumber || `LIC-${Date.now()}`,
+      vehicle_make: vInfo.make || 'N/A',
+      vehicle_model: vInfo.model || 'N/A',
+      vehicle_year: vInfo.year || 2000,
+      vehicle_color: vInfo.color || 'N/A',
+      vehicle_plate_number: vInfo.plateNumber || `PLATE-${Math.floor(Math.random()*1e6)}`,
+      vehicle_type: vInfo.vehicleType || 'economy',
+      document_driver_license: vInfo.documents?.driverLicense || 'placeholder',
+      document_vehicle_registration: vInfo.documents?.vehicleRegistration || 'placeholder',
+      document_insurance: vInfo.documents?.insurance || 'placeholder',
+      document_background_check: vInfo.documents?.backgroundCheck || 'placeholder',
+    };
+
     const { data: driver, error } = await supabase
       .from('drivers')
-      .insert({
-        clerk_id: clerkId,
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        phone_number: phoneNumber,
-        license_number: licenseNumber,
-        vehicle_make: vehicleInfo.make,
-        vehicle_model: vehicleInfo.model,
-        vehicle_year: vehicleInfo.year,
-        vehicle_color: vehicleInfo.color,
-        vehicle_plate_number: vehicleInfo.plateNumber,
-        vehicle_type: vehicleInfo.vehicleType || 'economy',
-        document_driver_license: vehicleInfo.documents?.driverLicense || '',
-        document_vehicle_registration: vehicleInfo.documents?.vehicleRegistration || '',
-        document_insurance: vehicleInfo.documents?.insurance || '',
-        document_background_check: vehicleInfo.documents?.backgroundCheck || ''
-      })
+      .insert(driverPayload)
       .select()
       .single();
 

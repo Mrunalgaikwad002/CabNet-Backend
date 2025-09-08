@@ -5,6 +5,7 @@ const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing Supabase environment variables');
+  console.error('Please check your .env file contains SUPABASE_URL and SUPABASE_KEY');
   process.exit(1);
 }
 

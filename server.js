@@ -5,12 +5,13 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
+
+// Load environment variables as early as possible
+dotenv.config();
+
 const { connectDB, supabase } = require('./config/database');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const server = createServer(app);
