@@ -104,30 +104,55 @@ router.post('/signup/driver', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { clerkId } = req.body;
+    const { clerkId, email } = req.body;
     const supabase = req.app.get('supabase');
     
-    // Check users table first
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('clerk_id', clerkId)
-      .single();
+    let user = null;
+    let driver = null;
+
+    // Attempt lookup by clerkId if provided
+    if (clerkId) {
+      const byId = await supabase
+        .from('users')
+        .select('*')
+        .eq('clerk_id', clerkId)
+        .single();
+      user = byId.data || null;
+      if (!user) {
+        const byIdDriver = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('clerk_id', clerkId)
+          .single();
+        driver = byIdDriver.data || null;
+      }
+    }
+
+    // Fallback: lookup by email if provided
+    if (!user && !driver && email) {
+      const byEmail = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+      user = byEmail.data || null;
+      if (!user) {
+        const byEmailDriver = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('email', email)
+          .single();
+        driver = byEmailDriver.data || null;
+      }
+    }
     
     if (user) {
-      const token = jwt.sign({ clerkId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ clerkId: user.clerk_id }, process.env.JWT_SECRET, { expiresIn: '7d' });
       return res.json({ success: true, user, token });
     }
     
-    // Check drivers table
-    const { data: driver, error: driverError } = await supabase
-      .from('drivers')
-      .select('*')
-      .eq('clerk_id', clerkId)
-      .single();
-    
     if (driver) {
-      const token = jwt.sign({ clerkId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ clerkId: driver.clerk_id }, process.env.JWT_SECRET, { expiresIn: '7d' });
       return res.json({ success: true, user: driver, token });
     }
     
