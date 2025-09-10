@@ -6,16 +6,22 @@ const jwt = require('jsonwebtoken');
 router.post('/signup/user', async (req, res) => {
   try {
     const { clerkId, email, firstName, lastName, phoneNumber } = req.body;
+    console.log('Signup attempt:', { clerkId, email, firstName, lastName, phoneNumber });
     const supabase = req.app.get('supabase');
     
     // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .or(`email.eq.${email},clerk_id.eq.${clerkId}`)
-      .single();
+      .or(`email.eq.${email},clerk_id.eq.${clerkId}`);
     
-    if (existingUser) {
+    if (checkError) {
+      console.log('Check error:', checkError);
+      return res.status(500).json({ success: false, message: checkError.message });
+    }
+    
+    if (existingUsers && existingUsers.length > 0) {
+      console.log('User already exists:', existingUsers);
       return res.status(400).json({ success: false, message: 'User already exists' });
     }
 
@@ -33,9 +39,11 @@ router.post('/signup/user', async (req, res) => {
       .single();
 
     if (error) {
+      console.log('User creation error:', error);
       return res.status(500).json({ success: false, message: error.message });
     }
 
+    console.log('User created successfully:', user);
     const token = jwt.sign({ clerkId }, process.env.JWT_SECRET, { expiresIn: '7d' });
     
     res.status(201).json({ success: true, user, token });
@@ -48,16 +56,22 @@ router.post('/signup/user', async (req, res) => {
 router.post('/signup/driver', async (req, res) => {
   try {
     const { clerkId, email, firstName, lastName, phoneNumber, licenseNumber, vehicleInfo } = req.body;
+    console.log('Driver signup attempt:', { clerkId, email, firstName, lastName, phoneNumber, licenseNumber, vehicleInfo });
     const supabase = req.app.get('supabase');
     
     // Check if driver already exists
-    const { data: existingDriver, error: checkError } = await supabase
+    const { data: existingDrivers, error: checkError } = await supabase
       .from('drivers')
       .select('id')
-      .or(`email.eq.${email},clerk_id.eq.${clerkId}`)
-      .single();
+      .or(`email.eq.${email},clerk_id.eq.${clerkId}`);
     
-    if (existingDriver) {
+    if (checkError) {
+      console.log('Driver check error:', checkError);
+      return res.status(500).json({ success: false, message: checkError.message });
+    }
+    
+    if (existingDrivers && existingDrivers.length > 0) {
+      console.log('Driver already exists:', existingDrivers);
       return res.status(400).json({ success: false, message: 'Driver already exists' });
     }
 
@@ -90,9 +104,11 @@ router.post('/signup/driver', async (req, res) => {
       .single();
 
     if (error) {
+      console.log('Driver creation error:', error);
       return res.status(500).json({ success: false, message: error.message });
     }
 
+    console.log('Driver created successfully:', driver);
     const token = jwt.sign({ clerkId }, process.env.JWT_SECRET, { expiresIn: '7d' });
     
     res.status(201).json({ success: true, driver, token });
@@ -112,37 +128,47 @@ router.post('/login', async (req, res) => {
 
     // Attempt lookup by clerkId if provided
     if (clerkId) {
-      const byId = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('clerk_id', clerkId)
         .single();
-      user = byId.data || null;
-      if (!user) {
-        const byIdDriver = await supabase
+      
+      if (!userError && userData) {
+        user = userData;
+      } else {
+        const { data: driverData, error: driverError } = await supabase
           .from('drivers')
           .select('*')
           .eq('clerk_id', clerkId)
           .single();
-        driver = byIdDriver.data || null;
+        
+        if (!driverError && driverData) {
+          driver = driverData;
+        }
       }
     }
 
     // Fallback: lookup by email if provided
     if (!user && !driver && email) {
-      const byEmail = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .single();
-      user = byEmail.data || null;
-      if (!user) {
-        const byEmailDriver = await supabase
+      
+      if (!userError && userData) {
+        user = userData;
+      } else {
+        const { data: driverData, error: driverError } = await supabase
           .from('drivers')
           .select('*')
           .eq('email', email)
           .single();
-        driver = byEmailDriver.data || null;
+        
+        if (!driverError && driverData) {
+          driver = driverData;
+        }
       }
     }
     
