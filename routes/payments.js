@@ -96,6 +96,9 @@ router.post('/create-checkout-session', async (req, res) => {
     }
 
     const frontendBase = process.env.STRIPE_RETURN_BASE_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+    
+    // Ensure the URL has the correct port
+    const baseUrl = frontendBase.includes(':3000') ? frontendBase : 'http://localhost:3000';
 
     const sessionPayload = {
       mode: 'payment',
@@ -115,8 +118,8 @@ router.post('/create-checkout-session', async (req, res) => {
           quantity: 1,
         },
       ],
-      success_url: (req.body.successUrl) || `${frontendBase}/user/dashboard?payment=success`,
-      cancel_url: (req.body.cancelUrl) || `${frontendBase}/user/dashboard?payment=cancel`,
+      success_url: (req.body.successUrl) || `${baseUrl}/user/dashboard?payment=success`,
+      cancel_url: (req.body.cancelUrl) || `${baseUrl}/user/dashboard?payment=cancel`,
     };
 
     // Only include shipping address collection if explicitly requested
