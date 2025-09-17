@@ -2,6 +2,24 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
+// Utility: find user or driver by email
+async function findAccountByEmail(supabase, email) {
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .single();
+  if (!userError && userData) return { type: 'user', record: userData };
+
+  const { data: driverData, error: driverError } = await supabase
+    .from('drivers')
+    .select('*')
+    .eq('email', email)
+    .single();
+  if (!driverError && driverData) return { type: 'driver', record: driverData };
+  return null;
+}
+
 // User signup
 router.post('/signup/user', async (req, res) => {
   try {
@@ -151,25 +169,9 @@ router.post('/login', async (req, res) => {
 
     // Fallback: lookup by email if provided
     if (!user && !driver && email) {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      if (!userError && userData) {
-        user = userData;
-      } else {
-        const { data: driverData, error: driverError } = await supabase
-          .from('drivers')
-          .select('*')
-          .eq('email', email)
-          .single();
-        
-        if (!driverError && driverData) {
-          driver = driverData;
-        }
-      }
+      const found = await findAccountByEmail(supabase, email);
+      if (found?.type === 'user') user = found.record;
+      if (found?.type === 'driver') driver = found.record;
     }
     
     if (user) {
@@ -183,6 +185,21 @@ router.post('/login', async (req, res) => {
     }
     
     return res.status(404).json({ success: false, message: 'User not found' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Forgot password (demo): verify account exists by email and return ok
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+    const supabase = req.app.get('supabase');
+    const found = await findAccountByEmail(supabase, email);
+    if (!found) return res.status(404).json({ success: false, message: 'No account found for this email' });
+    // In production, send reset email or update password hash in DB
+    return res.json({ success: true, message: 'Reset link processed' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

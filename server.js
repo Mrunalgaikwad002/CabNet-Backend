@@ -19,7 +19,7 @@ const server = createServer(app);
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "https://cabnet.vercel.app",
     methods: ["GET", "POST"]
   }
 });
@@ -36,7 +36,7 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(compression());
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_URL || "https://cabnet.vercel.app", credentials: true }));
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
