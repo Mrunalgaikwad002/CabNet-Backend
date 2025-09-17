@@ -19,7 +19,11 @@ const server = createServer(app);
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "https://cabnet.vercel.app",
+    origin: [
+      process.env.FRONTEND_URL || "https://cabnet.vercel.app",
+      "https://cabnet.vercel.app",
+      "https://cabnet.vercel.app/"
+    ],
     methods: ["GET", "POST"]
   }
 });
@@ -36,7 +40,21 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(compression());
-app.use(cors({ origin: process.env.FRONTEND_URL || "https://cabnet.vercel.app", credentials: true }));
+app.use(cors({ 
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || "https://cabnet.vercel.app",
+      "https://cabnet.vercel.app",
+      "https://cabnet.vercel.app/"
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true 
+}));
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
