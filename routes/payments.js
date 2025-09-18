@@ -95,10 +95,7 @@ router.post('/create-checkout-session', async (req, res) => {
       customerId = created.id;
     }
 
-    const frontendBase = process.env.STRIPE_RETURN_BASE_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
-    
-    // Ensure the URL has the correct port
-    const baseUrl = frontendBase.includes(':3000') ? frontendBase : 'http://localhost:3000';
+    const baseUrl = process.env.STRIPE_RETURN_BASE_URL || process.env.FRONTEND_URL || 'https://cabnet.vercel.app';
 
     const sessionPayload = {
       mode: 'payment',
