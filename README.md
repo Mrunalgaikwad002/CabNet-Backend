@@ -1,4 +1,4 @@
-git clone https://github.com/yourusername/ride-booking-backend.git
+git clone https://github.com/Mrunalgaikwad002/CabNet-Backend.git
 cd cabnet-backend
 
 2. Install Dependencies
@@ -117,3 +117,4 @@ Authentication: JWT
 Payments: Stripe API
 
 Maps: Leaflet+ Open Street Maps
+
