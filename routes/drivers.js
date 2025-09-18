@@ -6,7 +6,17 @@ const { validateRequest, driverProfileSchema } = require('../middleware/validati
 // Get driver profile
 router.get('/profile', auth, requireDriver, async (req, res) => {
   try {
-    const driver = await Driver.findById(req.user._id);
+    const supabase = req.app.get('supabase');
+    const { data: driver, error } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('clerk_id', req.user.clerk_id)
+      .single();
+    
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    
     res.json({ success: true, driver });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -16,11 +26,18 @@ router.get('/profile', auth, requireDriver, async (req, res) => {
 // Update driver profile
 router.put('/profile', auth, requireDriver, validateRequest(driverProfileSchema), async (req, res) => {
   try {
-    const driver = await Driver.findByIdAndUpdate(
-      req.user._id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const supabase = req.app.get('supabase');
+    const { data: driver, error } = await supabase
+      .from('drivers')
+      .update(req.body)
+      .eq('clerk_id', req.user.clerk_id)
+      .select()
+      .single();
+    
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    
     res.json({ success: true, driver });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -31,11 +48,18 @@ router.put('/profile', auth, requireDriver, validateRequest(driverProfileSchema)
 router.put('/status', auth, requireDriver, async (req, res) => {
   try {
     const { status } = req.body;
-    const driver = await Driver.findByIdAndUpdate(
-      req.user._id,
-      { status, lastActive: new Date() },
-      { new: true }
-    );
+    const supabase = req.app.get('supabase');
+    const { data: driver, error } = await supabase
+      .from('drivers')
+      .update({ status, last_active: new Date().toISOString() })
+      .eq('clerk_id', req.user.clerk_id)
+      .select()
+      .single();
+    
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    
     res.json({ success: true, driver });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -46,14 +70,25 @@ router.put('/status', auth, requireDriver, async (req, res) => {
 router.put('/location', auth, requireDriver, async (req, res) => {
   try {
     const { coordinates, address, city, state, zipCode } = req.body;
-    const driver = await Driver.findByIdAndUpdate(
-      req.user._id,
-      { 
-        location: { coordinates, address, city, state, zipCode },
-        lastActive: new Date()
-      },
-      { new: true }
-    );
+    const supabase = req.app.get('supabase');
+    const { data: driver, error } = await supabase
+      .from('drivers')
+      .update({ 
+        location_coordinates: `(${coordinates[0]},${coordinates[1]})`,
+        location_address: address,
+        location_city: city,
+        location_state: state,
+        location_zip_code: zipCode,
+        last_active: new Date().toISOString()
+      })
+      .eq('clerk_id', req.user.clerk_id)
+      .select()
+      .single();
+    
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    
     res.json({ success: true, driver });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -63,10 +98,19 @@ router.put('/location', auth, requireDriver, async (req, res) => {
 // Get available rides
 router.get('/rides/available', auth, requireDriver, async (req, res) => {
   try {
-    const rides = await Ride.find({ 
-      status: 'requested',
-      rideType: req.user.vehicleInfo.vehicleType
-    }).populate('rider', 'firstName lastName');
+    const supabase = req.app.get('supabase');
+    const { data: rides, error } = await supabase
+      .from('rides')
+      .select(`
+        *,
+        rider:users(first_name, last_name, phone_number)
+      `)
+      .eq('status', 'requested')
+      .eq('ride_type', req.user.vehicle_type || 'economy');
+    
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
     
     res.json({ success: true, rides });
   } catch (error) {
@@ -77,9 +121,19 @@ router.get('/rides/available', auth, requireDriver, async (req, res) => {
 // Get driver ride history
 router.get('/rides/history', auth, requireDriver, async (req, res) => {
   try {
-    const rides = await Ride.find({ driver: req.user._id })
-      .populate('rider', 'firstName lastName')
-      .sort({ createdAt: -1 });
+    const supabase = req.app.get('supabase');
+    const { data: rides, error } = await supabase
+      .from('rides')
+      .select(`
+        *,
+        rider:users(first_name, last_name, phone_number)
+      `)
+      .eq('driver_id', req.user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
     
     res.json({ success: true, rides });
   } catch (error) {
